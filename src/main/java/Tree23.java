@@ -1,61 +1,101 @@
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
-// 3. 2-3 дерево
-public class Main {
-    public static void main(String[] args) {
+public class Tree23 {
+    private Node root;
+    public long operations = 0; // Счетчик операций (сравнений)
 
+    private class Node {
+        List<Integer> keys = new ArrayList<>();
+        List<Node> children = new ArrayList<>();
+
+        boolean isLeaf() { return children.isEmpty(); }
     }
-}
 
-class Tree23 {
-    private Node23 root; // Самая верхняя комната
-
-    // 1. Поиск числа
     public boolean find(int key) {
         return find(root, key);
     }
 
-    private boolean find(Node23 node, int key) {
+    private boolean find(Node node, int key) {
         if (node == null) return false;
-
-        // Ищем число прямо в текущей комнате
-        if (node.keys.contains(key)) return true;
-
-        // Если мы в самом низу и не нашли - значит числа нет
-        if (node.isLeaf()) return false;
-
-        // Решаем, в какую дверь спускаться
-        if (key < node.keys.get(0)) {
-            return find(node.children.get(0), key); // В левую дверь
-        } else if (node.keys.size() == 1 || key < node.keys.get(1)) {
-            return find(node.children.get(1), key); // В среднюю (или правую для 1 числа)
-        } else {
-            return find(node.children.get(2), key); // В правую дверь
+        operations++;
+        for (int i = 0; i < node.keys.size(); i++) {
+            operations++;
+            if (key == node.keys.get(i)) return true;
+            if (key < node.keys.get(i)) return find(node.isLeaf() ? null : node.children.get(i), key);
         }
+        return find(node.isLeaf() ? null : node.children.get(node.children.size() - 1), key);
     }
 
-    // 2. Вставка (упрощенная логика)
     public void insert(int key) {
         if (root == null) {
-            root = new Node23();
+            root = new Node();
             root.keys.add(key);
             return;
         }
-        // В реальном коде тут была бы сложная логика "взрывов" (split)
-        System.out.println("Пытаемся положить число " + key + " в дерево...");
-        // В учебных целях здесь обычно показывают процесс перестроения
+        Node extra = insert(root, key);
+        if (extra != null) {
+            Node newRoot = new Node();
+            newRoot.keys.add(extra.keys.get(0));
+            newRoot.children.add(root);
+            newRoot.children.add(extra.children.get(0));
+            root = newRoot;
+        }
     }
 
-    public static void main(String[] args) {
-        Tree23 tree = new Tree23();
+    private Node insert(Node node, int key) {
+        operations++;
+        if (node.isLeaf()) {
+            node.keys.add(key);
+            Collections.sort(node.keys);
+        } else {
+            int i = 0;
+            while (i < node.keys.size() && key > node.keys.get(i)) {
+                i++;
+                operations++;
+            }
+            Node extra = insert(node.children.get(i), key);
+            if (extra != null) {
+                node.keys.add(i, extra.keys.get(0));
+                node.children.add(i + 1, extra.children.get(0));
+            }
+        }
 
-        // Пример использования
-        System.out.println("Создаем дерево...");
-        tree.insert(10);
-        tree.insert(20);
+        if (node.keys.size() > 2) {
+            return split(node);
+        }
+        return null;
+    }
 
-        System.out.println("Есть ли в дереве 10? " + tree.find(10));
-        System.out.println("Есть ли в дереве 50? " + tree.find(50));
+    private Node split(Node node) {
+        Node newNode = new Node();
+        int midKey = node.keys.get(1);
+        newNode.keys.add(midKey);
+
+        Node rightSibling = new Node();
+        rightSibling.keys.add(node.keys.get(2));
+        if (!node.isLeaf()) {
+            rightSibling.children.add(node.children.get(2));
+            rightSibling.children.add(node.children.get(3));
+            node.children.remove(3);
+            node.children.remove(2);
+        }
+
+        node.keys.remove(2);
+        node.keys.remove(1);
+
+        newNode.children.add(rightSibling);
+        return newNode;
+    }
+
+    public void delete(int key) {
+        root = delete(root, key);
+    }
+
+    private Node delete(Node node, int key) {
+        if (node == null) return null;
+        operations++;
+        node.keys.remove(Integer.valueOf(key)); // Упрощенно: удаляем и "схлопываем"
+        if (node.keys.isEmpty() && !node.isLeaf()) return node.children.get(0);
+        return node;
     }
 }
